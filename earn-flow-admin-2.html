@@ -1,0 +1,652 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Earn Flow — Admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css"/>
+    <style>
+        :root {
+            --primary: #E74C3C;
+            --secondary: #F39C12;
+            --bg: #1B2631;
+            --surface: #283747;
+            --surface2: #2C3E50;
+            --border: #3D5166;
+            --text: #FDFEFE;
+            --text2: #ABB2B9;
+            --success: #27AE60;
+            --danger: #C0392B;
+            --pending: #F39C12;
+            --grad: linear-gradient(135deg, #E74C3C, #F39C12);
+        }
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { font-family:'Poppins',sans-serif; background:var(--bg); color:var(--text); min-height:100vh; }
+
+        /* ── Sidebar ── */
+        #sidebar {
+            position:fixed; top:0; left:0; width:240px; height:100vh;
+            background:var(--surface2); display:flex; flex-direction:column;
+            z-index:200; transform:translateX(-100%);
+            transition:transform .3s ease; border-right:1px solid var(--border);
+        }
+        #sidebar.open { transform:translateX(0); }
+        .sidebar-logo {
+            padding:25px 20px 20px;
+            background:var(--grad);
+            display:flex; align-items:center; gap:12px;
+        }
+        .sidebar-logo .logo-icon {
+            width:40px; height:40px; background:rgba(255,255,255,.2);
+            border-radius:10px; display:flex; align-items:center; justify-content:center;
+            font-size:1.2rem;
+        }
+        .sidebar-logo h2 { font-size:1.1rem; font-weight:700; color:#fff; }
+        .sidebar-logo small { font-size:0.7rem; opacity:.8; color:#fff; display:block; }
+        .close-btn {
+            position:absolute; top:12px; right:15px;
+            background:none; border:none; color:#fff; font-size:1.4rem; cursor:pointer;
+        }
+        .nav-menu { list-style:none; padding:10px 0; flex:1; overflow-y:auto; }
+        .nav-menu li {
+            display:flex; align-items:center; gap:12px;
+            padding:13px 20px; cursor:pointer; font-size:.9rem; font-weight:500;
+            color:var(--text2); border-left:3px solid transparent;
+            transition:all .2s;
+        }
+        .nav-menu li:hover { background:rgba(255,255,255,.05); color:var(--text); }
+        .nav-menu li.active { background:rgba(231,76,60,.12); color:var(--primary); border-left-color:var(--primary); }
+        .nav-menu li i { width:18px; text-align:center; }
+        .sidebar-footer { padding:15px 20px; border-top:1px solid var(--border); }
+        .sidebar-footer p { font-size:.75rem; color:var(--text2); }
+
+        /* ── Top Bar ── */
+        #topbar {
+            position:sticky; top:0; z-index:100;
+            background:var(--surface2); border-bottom:1px solid var(--border);
+            padding:0 20px; height:60px;
+            display:flex; align-items:center; gap:15px;
+        }
+        #menu-toggle { background:none; border:none; color:var(--text); font-size:1.3rem; cursor:pointer; }
+        #page-title { font-size:1rem; font-weight:600; }
+        .topbar-badge {
+            margin-left:auto; background:var(--grad);
+            padding:5px 12px; border-radius:20px; font-size:.75rem; font-weight:600;
+        }
+
+        /* ── Overlay ── */
+        #overlay { position:fixed; inset:0; background:rgba(0,0,0,.6); z-index:150; display:none; }
+        #overlay.show { display:block; }
+
+        /* ── Content ── */
+        #main-content { padding:20px; max-width:900px; }
+        .page { display:none; }
+        .page.active { display:block; animation:fadeUp .3s ease; }
+        @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+
+        /* ── Cards ── */
+        .card {
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:14px; padding:20px; margin-bottom:18px;
+        }
+        .card h4 { font-size:.85rem; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:.05em; margin-bottom:15px; }
+
+        /* ── Stat Cards ── */
+        .stat-grid { display:grid; grid-template-columns:1fr 1fr; gap:14px; margin-bottom:18px; }
+        .stat-card {
+            background:var(--surface); border:1px solid var(--border);
+            border-radius:14px; padding:18px; display:flex; flex-direction:column; gap:6px;
+        }
+        .stat-card .label { font-size:.78rem; color:var(--text2); font-weight:500; }
+        .stat-card .value { font-size:1.8rem; font-weight:700; background:var(--grad); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+        .stat-card .icon { font-size:1.4rem; margin-bottom:4px; }
+
+        /* ── Table ── */
+        .table-wrap { overflow-x:auto; }
+        table { width:100%; border-collapse:collapse; font-size:.88rem; }
+        thead th { padding:10px 12px; text-align:left; font-size:.75rem; font-weight:600; color:var(--text2); text-transform:uppercase; letter-spacing:.05em; border-bottom:1px solid var(--border); }
+        tbody tr { border-bottom:1px solid var(--border); transition:background .15s; }
+        tbody tr:last-child { border-bottom:none; }
+        tbody tr:hover { background:rgba(255,255,255,.03); }
+        td { padding:12px; vertical-align:middle; }
+        td small { color:var(--text2); font-size:.78rem; display:block; margin-top:2px; }
+
+        /* Card-style rows on mobile */
+        @media(max-width:640px) {
+            thead { display:none; }
+            tbody tr { display:block; margin-bottom:12px; border:1px solid var(--border); border-radius:10px; padding:12px; }
+            td { display:flex; justify-content:space-between; align-items:flex-start; padding:6px 0; border-bottom:1px solid var(--border); }
+            td:last-child { border-bottom:none; }
+            td::before { content:attr(data-label); font-size:.75rem; font-weight:600; color:var(--text2); flex-shrink:0; margin-right:10px; }
+        }
+
+        /* ── Badges ── */
+        .badge { padding:4px 10px; border-radius:20px; font-size:.75rem; font-weight:600; display:inline-block; }
+        .badge-pending  { background:rgba(243,156,18,.15);  color:var(--pending); }
+        .badge-success  { background:rgba(39,174,96,.15);   color:var(--success); }
+        .badge-danger   { background:rgba(192,57,43,.15);   color:var(--danger); }
+
+        /* ── Buttons ── */
+        .btn { padding:8px 14px; border:none; border-radius:8px; font-family:'Poppins',sans-serif; font-size:.82rem; font-weight:600; cursor:pointer; transition:opacity .2s; display:inline-flex; align-items:center; gap:6px; }
+        .btn:hover { opacity:.85; }
+        .btn:disabled { opacity:.5; cursor:not-allowed; }
+        .btn-primary  { background:var(--grad); color:#fff; }
+        .btn-success  { background:var(--success); color:#fff; }
+        .btn-danger   { background:var(--danger);  color:#fff; }
+        .btn-ghost    { background:rgba(255,255,255,.08); color:var(--text); }
+        .btn-full     { width:100%; justify-content:center; padding:13px; font-size:.95rem; }
+
+        /* ── Form ── */
+        .form-group { margin-bottom:14px; }
+        .form-group label { display:block; font-size:.82rem; font-weight:500; color:var(--text2); margin-bottom:6px; }
+        .form-group input, .form-group textarea, .form-group select {
+            width:100%; padding:11px 14px; border:1px solid var(--border);
+            border-radius:9px; background:var(--bg); color:var(--text);
+            font-family:'Poppins',sans-serif; font-size:.9rem;
+            transition:border-color .2s;
+        }
+        .form-group input:focus, .form-group textarea:focus {
+            outline:none; border-color:var(--primary);
+            box-shadow:0 0 0 3px rgba(231,76,60,.15);
+        }
+        .form-group textarea { resize:vertical; min-height:80px; }
+        .form-section-title {
+            font-size:.75rem; font-weight:700; color:var(--text2);
+            text-transform:uppercase; letter-spacing:.08em;
+            margin:20px 0 12px; padding-bottom:8px; border-bottom:1px solid var(--border);
+        }
+
+        /* ── Method group ── */
+        .method-group {
+            display:flex; gap:8px; margin-bottom:10px; align-items:center;
+        }
+        .method-group input { flex:1; }
+        .method-group .btn { flex-shrink:0; }
+
+        /* ── Dynamic item list ── */
+        .item-list { list-style:none; }
+        .item-list li {
+            display:flex; justify-content:space-between; align-items:center;
+            padding:10px 0; border-bottom:1px solid var(--border); font-size:.88rem;
+        }
+        .item-list li:last-child { border-bottom:none; }
+
+        /* ── Empty state ── */
+        .empty { text-align:center; padding:40px 20px; color:var(--text2); }
+        .empty i { font-size:2.5rem; margin-bottom:12px; display:block; opacity:.4; }
+        .empty p { font-size:.9rem; }
+
+        /* ── Error ── */
+        .error-box { background:rgba(192,57,43,.12); border:1px solid var(--danger); border-radius:12px; padding:18px; color:var(--danger); font-size:.88rem; margin-bottom:16px; }
+        .error-box b { display:block; margin-bottom:5px; }
+
+        /* ── Section divider ── */
+        .divider { border:none; border-top:1px solid var(--border); margin:20px 0; }
+
+        /* ── Desktop layout ── */
+        @media(min-width:768px) {
+            #sidebar { transform:translateX(0); }
+            #topbar { display:none; }
+            #overlay { display:none !important; }
+            body { display:flex; }
+            #sidebar { position:static; height:100vh; }
+            #page-wrapper { flex:1; overflow-y:auto; height:100vh; }
+            #main-content { padding:30px; }
+            .close-btn { display:none; }
+            .stat-grid { grid-template-columns:repeat(4,1fr); }
+        }
+    </style>
+</head>
+<body>
+
+<aside id="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon"><i class="fas fa-bolt"></i></div>
+        <div>
+            <h2>Earn Flow</h2>
+            <small>Admin Panel</small>
+        </div>
+        <button class="close-btn">&times;</button>
+    </div>
+    <ul class="nav-menu">
+        <li data-page="dashboard" class="active"><i class="fas fa-tachometer-alt"></i> Dashboard</li>
+        <li data-page="users"><i class="fas fa-users"></i> Users</li>
+        <li data-page="withdrawals"><i class="fas fa-wallet"></i> Pending Withdrawals</li>
+        <li data-page="history"><i class="fas fa-history"></i> Withdrawal History</li>
+        <li data-page="tasks"><i class="fas fa-tasks"></i> Tasks & Links</li>
+        <li data-page="settings"><i class="fas fa-cog"></i> App Settings</li>
+        <li data-page="broadcast"><i class="fas fa-bullhorn"></i> Broadcast</li>
+    </ul>
+    <div class="sidebar-footer">
+        <p>Earn Flow v1.0</p>
+    </div>
+</aside>
+
+<div id="overlay"></div>
+
+<div id="page-wrapper" style="flex:1;overflow-y:auto;">
+    <header id="topbar">
+        <button id="menu-toggle"><i class="fas fa-bars"></i></button>
+        <span id="page-title">Dashboard</span>
+        <span class="topbar-badge"><i class="fas fa-bolt"></i> Earn Flow</span>
+    </header>
+    <main id="main-content"></main>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+
+    // ── Firebase ─────────────────────────────────────────────────────────
+    const firebaseConfig = {
+        apiKey: "AIzaSyDX4H6hl8gGx59KrfwuODOTJDkwChcOO-w",
+        authDomain: "clone-afefa.firebaseapp.com",
+        databaseURL: "https://clone-afefa-default-rtdb.firebaseio.com",
+        projectId: "clone-afefa",
+        storageBucket: "clone-afefa.firebasestorage.app",
+        messagingSenderId: "118515097456",
+        appId: "1:118515097456:web:8e40eb88450be30500f9b5"
+    };
+    if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
+    const el   = id => document.getElementById(id);
+    const main = el('main-content');
+    const sidebar  = el('sidebar');
+    const overlay  = el('overlay');
+    const pageTitleEl = el('page-title');
+
+    // ── Helpers ──────────────────────────────────────────────────────────
+    const loading = (msg='Loading...') => {
+        main.innerHTML = `<div class="card"><div style="text-align:center;padding:30px;color:var(--text2);"><i class="fas fa-spinner fa-spin" style="font-size:1.5rem;margin-bottom:10px;display:block;"></i>${msg}</div></div>`;
+    };
+    const showError = (msg) => {
+        main.innerHTML = `<div class="error-box"><b>⚠️ Error</b>${msg}<br><br><button class="btn btn-ghost" onclick="location.reload()"><i class="fas fa-redo"></i> Reload</button></div>`;
+    };
+    const fmt = (n) => parseFloat(n || 0).toFixed(2);
+    const fmtDate = (ts) => typeof ts === 'number' ? new Date(ts).toLocaleString() : 'N/A';
+    const fmtDay  = (ts) => typeof ts === 'number' ? new Date(ts).toLocaleDateString() : 'N/A';
+
+    // ── Dashboard ────────────────────────────────────────────────────────
+    const renderDashboard = async () => {
+        loading('Loading dashboard...');
+        try {
+            const [uSnap, pSnap, cSnap, rSnap] = await Promise.all([
+                db.ref('users').once('value'),
+                db.ref('withdrawals/pending').once('value'),
+                db.ref('withdrawals/completed').once('value'),
+                db.ref('withdrawals/rejected').once('value'),
+            ]);
+            let totalBal = 0;
+            uSnap.forEach(c => { totalBal += parseFloat(c.val().balance || 0); });
+
+            main.innerHTML = `<div class="page active">
+                <div class="stat-grid">
+                    <div class="stat-card"><div class="icon">👥</div><div class="label">Total Users</div><div class="value">${uSnap.numChildren()}</div></div>
+                    <div class="stat-card"><div class="icon">⏳</div><div class="label">Pending</div><div class="value">${pSnap.numChildren()}</div></div>
+                    <div class="stat-card"><div class="icon">✅</div><div class="label">Completed</div><div class="value">${cSnap.numChildren()}</div></div>
+                    <div class="stat-card"><div class="icon">💰</div><div class="label">Total Balance</div><div class="value">${fmt(totalBal)}</div></div>
+                </div>
+                <div class="card">
+                    <h4>Quick Actions</h4>
+                    <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                        <button class="btn btn-primary" onclick="navTo('withdrawals')"><i class="fas fa-wallet"></i> Review Withdrawals</button>
+                        <button class="btn btn-ghost" onclick="navTo('users')"><i class="fas fa-users"></i> View Users</button>
+                        <button class="btn btn-ghost" onclick="navTo('settings')"><i class="fas fa-cog"></i> Settings</button>
+                    </div>
+                </div>
+            </div>`;
+        } catch(e) { showError('Could not load dashboard. ' + e.message); }
+    };
+
+    // ── Users ─────────────────────────────────────────────────────────────
+    const renderUsers = async () => {
+        loading('Loading users...');
+        try {
+            const snap = await db.ref('users').orderByChild('firstName').once('value');
+            let rows = '';
+            snap.forEach(c => {
+                const u = c.val(); const uid = c.key;
+                const name = `${u.firstName||''} ${u.lastName||''}`.trim() || 'Unknown';
+                rows += `<tr>
+                    <td data-label="User">${name}<small>${uid}</small></td>
+                    <td data-label="Balance">${fmt(u.balance)} Coin</td>
+                    <td data-label="Referrals">${u.referrals||0}</td>
+                    <td data-label="Total Earned">${fmt(u.totalEarned)} Coin</td>
+                    <td data-label="Actions">
+                        <button class="btn btn-primary" onclick="adminActions.editBalance('${uid}','${name.replace(/'/g,'')}')">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                    </td>
+                </tr>`;
+            });
+            main.innerHTML = `<div class="page active">
+                <div class="card">
+                    <h4>All Users (${snap.numChildren()})</h4>
+                    <div class="table-wrap"><table>
+                        <thead><tr><th>User</th><th>Balance</th><th>Referrals</th><th>Total Earned</th><th>Actions</th></tr></thead>
+                        <tbody>${rows || '<tr><td colspan="5"><div class="empty"><i class="fas fa-users"></i><p>No users yet.</p></div></td></tr>'}</tbody>
+                    </table></div>
+                </div>
+            </div>`;
+        } catch(e) { showError('Could not load users. ' + e.message); }
+    };
+
+    // ── Pending Withdrawals ───────────────────────────────────────────────
+    const renderWithdrawals = async () => {
+        loading('Loading withdrawal requests...');
+        try {
+            const snap = await db.ref('withdrawals/pending').orderByChild('timestamp').once('value');
+            let reqs = [];
+            snap.forEach(c => { reqs.push({ _key: c.key, ...c.val() }); });
+            reqs.reverse();
+            let rows = '';
+            reqs.forEach(r => {
+                const id = r._key || r.id || '';
+                rows += `<tr>
+                    <td data-label="User">${r.userName||'Unknown'}<small>${fmtDate(r.timestamp)}</small></td>
+                    <td data-label="Amount"><b>${fmt(r.amount)} Coin</b><small>${r.method||''} · ${r.account||''}</small></td>
+                    <td data-label="Status"><span class="badge badge-pending">Pending</span></td>
+                    <td data-label="Actions">
+                        <button class="btn btn-success" onclick="adminActions.handleWithdrawal('${id}','approve')"><i class="fas fa-check"></i> Approve</button>
+                        <button class="btn btn-danger"  onclick="adminActions.handleWithdrawal('${id}','reject')"><i class="fas fa-times"></i> Reject</button>
+                    </td>
+                </tr>`;
+            });
+            main.innerHTML = `<div class="page active">
+                <div class="card">
+                    <h4>Pending Withdrawals (${reqs.length})</h4>
+                    <div class="table-wrap"><table>
+                        <thead><tr><th>User & Date</th><th>Amount & Method</th><th>Status</th><th>Actions</th></tr></thead>
+                        <tbody>${rows || '<tr><td colspan="4"><div class="empty"><i class="fas fa-check-circle"></i><p>No pending requests.</p></div></td></tr>'}</tbody>
+                    </table></div>
+                </div>
+            </div>`;
+        } catch(e) { showError('Could not load withdrawals. ' + e.message); }
+    };
+
+    // ── Withdrawal History ────────────────────────────────────────────────
+    const renderHistory = async () => {
+        loading('Loading history...');
+        try {
+            const [cSnap, rSnap] = await Promise.all([
+                db.ref('withdrawals/completed').orderByChild('timestamp').limitToLast(100).once('value'),
+                db.ref('withdrawals/rejected').orderByChild('timestamp').limitToLast(100).once('value')
+            ]);
+            const makeRows = (snap, statusClass, statusLabel) => {
+                let items = [];
+                snap.forEach(c => items.push(c.val()));
+                items.reverse();
+                return items.map(r => `<tr>
+                    <td data-label="User">${r.userName||'Unknown'}</td>
+                    <td data-label="Amount">${fmt(r.amount)} Coin</td>
+                    <td data-label="Method">${r.method||'N/A'}</td>
+                    <td data-label="Date">${fmtDay(r.timestamp)}</td>
+                    <td data-label="Status"><span class="badge ${statusClass}">${statusLabel}</span></td>
+                </tr>`).join('') || `<tr><td colspan="5"><div class="empty"><i class="fas fa-inbox"></i><p>None found.</p></div></td></tr>`;
+            };
+            main.innerHTML = `<div class="page active">
+                <div class="card">
+                    <h4>✅ Completed Withdrawals</h4>
+                    <div class="table-wrap"><table>
+                        <thead><tr><th>User</th><th>Amount</th><th>Method</th><th>Date</th><th>Status</th></tr></thead>
+                        <tbody>${makeRows(cSnap,'badge-success','Completed')}</tbody>
+                    </table></div>
+                </div>
+                <div class="card">
+                    <h4>❌ Rejected Withdrawals</h4>
+                    <div class="table-wrap"><table>
+                        <thead><tr><th>User</th><th>Amount</th><th>Method</th><th>Date</th><th>Status</th></tr></thead>
+                        <tbody>${makeRows(rSnap,'badge-danger','Rejected')}</tbody>
+                    </table></div>
+                </div>
+            </div>`;
+        } catch(e) { showError('Could not load history. ' + e.message); }
+    };
+
+    // ── Tasks & Links ─────────────────────────────────────────────────────
+    const renderTasks = async () => {
+        main.innerHTML = `<div class="page active">
+            <div class="card" id="tasks-list"><div style="text-align:center;padding:20px;color:var(--text2);"><i class="fas fa-spinner fa-spin"></i></div></div>
+            <div class="card">
+                <h4>➕ Add Task</h4>
+                <div class="form-group"><label>Task Name</label><input id="t-name" placeholder="e.g. Join Telegram Channel"></div>
+                <div class="form-group"><label>URL</label><input id="t-url" placeholder="https://t.me/..."></div>
+                <div class="form-group"><label>Reward (Coin)</label><input id="t-reward" type="number" placeholder="10"></div>
+                <div class="form-group"><label>Icon URL</label><input id="t-icon" placeholder="https://..."></div>
+                <button class="btn btn-primary" onclick="adminActions.addTask()"><i class="fas fa-plus"></i> Add Task</button>
+            </div>
+            <div class="card" id="links-list"><div style="text-align:center;padding:20px;color:var(--text2);"><i class="fas fa-spinner fa-spin"></i></div></div>
+            <div class="card">
+                <h4>➕ Add Link / Button</h4>
+                <div class="form-group"><label>Button Name</label><input id="l-name" placeholder="e.g. Our Channel"></div>
+                <div class="form-group"><label>URL</label><input id="l-url" placeholder="https://..."></div>
+                <div class="form-group"><label>Icon URL</label><input id="l-icon" placeholder="https://..."></div>
+                <button class="btn btn-primary" onclick="adminActions.addLink()"><i class="fas fa-plus"></i> Add Link</button>
+            </div>
+        </div>`;
+        loadList('tasks');
+        loadList('links');
+    };
+
+    const loadList = async (type) => {
+        const container = el(`${type}-list`);
+        if (!container) return;
+        try {
+            const snap = await db.ref(`config/${type}`).once('value');
+            let items = [];
+            snap.forEach(c => items.push({ key: c.key, ...c.val() }));
+            items.reverse();
+            const label = type === 'tasks' ? 'Tasks' : 'Links / Buttons';
+            let html = `<h4>📋 Current ${label}</h4>`;
+            if (items.length) {
+                html += `<ul class="item-list">${items.map(item =>
+                    `<li>${item.name||'Unnamed'} ${item.reward ? `<span class="badge badge-success">+${item.reward} Coin</span>` : ''}
+                    <button class="btn btn-danger" style="padding:5px 9px;" onclick="adminActions.deleteItem('${type}','${item.key}')"><i class="fas fa-trash"></i></button></li>`
+                ).join('')}</ul>`;
+            } else {
+                html += `<div class="empty"><i class="fas fa-inbox"></i><p>No ${type} added yet.</p></div>`;
+            }
+            container.innerHTML = html;
+        } catch(e) { if(container) container.innerHTML = `<p style="color:var(--danger);">Error loading ${type}.</p>`; }
+    };
+
+    // ── Settings ──────────────────────────────────────────────────────────
+    const renderSettings = async () => {
+        loading('Loading settings...');
+        try {
+            const snap = await db.ref('config').once('value');
+            const c = snap.val() || {};
+            main.innerHTML = `<div class="page active">
+                <div class="card">
+                    <div class="form-section-title">🤖 Bot Settings</div>
+                    <div class="form-group"><label>Bot Username (without @)</label><input id="s-botUsername" value="${c.botUsername||''}"></div>
+                    <div class="form-group"><label>Bot Token</label><input id="s-botToken" value="${c.botToken||''}" type="password"></div>
+                    <div class="form-group"><label>Welcome Message</label><textarea id="s-welcomeMessage">${c.welcomeMessage||''}</textarea></div>
+
+                    <div class="form-section-title">📺 Ad Settings</div>
+                    <div class="form-group"><label>Ad Zone ID</label><input id="s-adZoneId" type="number" value="${c.adZoneId||''}"></div>
+                    <div class="form-group"><label>Coin Per Ad</label><input id="s-adValue" type="number" step="any" value="${c.adValue||0}"></div>
+                    <div class="form-group"><label>Daily Ad Limit</label><input id="s-dailyAdLimit" type="number" value="${c.dailyAdLimit||0}"></div>
+                    <div class="form-group"><label>Ads Before Break</label><input id="s-adsPerBreak" type="number" value="${c.adsPerBreak||0}"></div>
+                    <div class="form-group"><label>Break Duration (minutes)</label><input id="s-breakDuration" type="number" value="${c.breakDuration||0}"></div>
+
+                    <div class="form-section-title">💰 Earning Settings</div>
+                    <div class="form-group"><label>Referral Bonus (Coin)</label><input id="s-referralBonus" type="number" step="any" value="${c.referralBonus||0}"></div>
+
+                    <div class="form-section-title">🏧 Withdrawal Settings</div>
+                    <div class="form-group"><label>Minimum Referrals to Withdraw</label><input id="s-minRefs" type="number" value="${c.minimumWithdrawReferrals||0}"></div>
+                    <div id="methods-container"></div>
+                    <button class="btn btn-ghost" onclick="adminActions.addMethodField()" style="margin-bottom:20px;"><i class="fas fa-plus"></i> Add Method</button>
+
+                    <hr class="divider">
+                    <button class="btn btn-primary btn-full" onclick="adminActions.saveSettings()"><i class="fas fa-save"></i> Save All Settings</button>
+                </div>
+            </div>`;
+            renderMethods(c.withdrawMethods);
+        } catch(e) { showError('Could not load settings. ' + e.message); }
+    };
+
+    const renderMethods = (methods) => {
+        const container = el('methods-container');
+        if (!container) return;
+        container.innerHTML = '';
+        if (Array.isArray(methods)) {
+            methods.forEach(m => {
+                container.innerHTML += `<div class="method-group">
+                    <input value="${m.name||''}" placeholder="Method (e.g. bKash)">
+                    <input type="number" step="any" value="${m.min||''}" placeholder="Min Coin" style="max-width:120px;">
+                    <button class="btn btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+                </div>`;
+            });
+        }
+    };
+
+    // ── Broadcast ─────────────────────────────────────────────────────────
+    const renderBroadcast = () => {
+        main.innerHTML = `<div class="page active">
+            <div class="card">
+                <h4>📢 Queue Broadcast</h4>
+                <p style="font-size:.85rem;color:var(--text2);margin-bottom:16px;">Message will be queued. A Firebase Cloud Function is required to actually send it to users.</p>
+                <div class="form-group"><label>Message</label><textarea id="bc-msg" rows="5" placeholder="Your message..."></textarea></div>
+                <button class="btn btn-danger" onclick="adminActions.sendBroadcast()"><i class="fas fa-paper-plane"></i> Queue Broadcast</button>
+            </div>
+        </div>`;
+    };
+
+    // ── Admin Actions ─────────────────────────────────────────────────────
+    window.adminActions = {
+        editBalance: async (uid, name) => {
+            const input = prompt(`Add/subtract Coin for ${name}.\nNegative = subtract (e.g. -50):`);
+            if (input === null) return;
+            const val = parseFloat(input);
+            if (isNaN(val)) { alert('Invalid amount.'); return; }
+            try {
+                await db.ref(`users/${uid}/balance`).set(firebase.database.ServerValue.increment(val));
+                alert('✅ Balance updated!');
+                renderUsers();
+            } catch(e) { alert('❌ ' + e.message); }
+        },
+        handleWithdrawal: async (reqId, action) => {
+            if (!reqId) { alert('Invalid ID.'); return; }
+            const label = action === 'approve' ? 'approve' : 'reject';
+            if (!confirm(`Are you sure you want to ${label} this request?`)) return;
+            try {
+                const ref = db.ref(`withdrawals/pending/${reqId}`);
+                const snap = await ref.once('value');
+                const req = snap.val();
+                if (!req) { alert('Not found. May already be processed.'); renderWithdrawals(); return; }
+                if (action === 'reject') {
+                    await db.ref(`users/${req.userId}/balance`).set(firebase.database.ServerValue.increment(parseFloat(req.amount||0)));
+                }
+                const status = action === 'approve' ? 'completed' : 'rejected';
+                await db.ref(`withdrawals/${status}/${reqId}`).set({ ...req, id:reqId, status, processedAt:Date.now() });
+                await ref.remove();
+                alert(action === 'approve' ? '✅ Approved!' : '❌ Rejected & refunded.');
+                renderWithdrawals();
+            } catch(e) { alert('❌ ' + e.message); }
+        },
+        addTask: async () => {
+            const name = el('t-name').value.trim(), url = el('t-url').value.trim();
+            const reward = parseFloat(el('t-reward').value), icon = el('t-icon').value.trim();
+            if (!name||!url||!reward||!icon) { alert('All fields required.'); return; }
+            try { await db.ref('config/tasks').push({name,url,reward,icon}); alert('✅ Task added!'); renderTasks(); }
+            catch(e) { alert('❌ ' + e.message); }
+        },
+        addLink: async () => {
+            const name = el('l-name').value.trim(), url = el('l-url').value.trim(), icon = el('l-icon').value.trim();
+            if (!name||!url||!icon) { alert('All fields required.'); return; }
+            try { await db.ref('config/links').push({name,url,icon}); alert('✅ Link added!'); renderTasks(); }
+            catch(e) { alert('❌ ' + e.message); }
+        },
+        deleteItem: async (type, key) => {
+            if (!confirm('Delete this item?')) return;
+            try { await db.ref(`config/${type}/${key}`).remove(); alert('✅ Deleted!'); renderTasks(); }
+            catch(e) { alert('❌ ' + e.message); }
+        },
+        addMethodField: () => {
+            el('methods-container').innerHTML += `<div class="method-group">
+                <input placeholder="Method (e.g. Nagad)">
+                <input type="number" step="any" placeholder="Min Coin" style="max-width:120px;">
+                <button class="btn btn-danger" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>
+            </div>`;
+        },
+        saveSettings: async () => {
+            try {
+                const methods = [];
+                document.querySelectorAll('.method-group').forEach(g => {
+                    const name = g.children[0].value.trim();
+                    const min  = parseFloat(g.children[1].value);
+                    if (name && !isNaN(min)) methods.push({ name, min });
+                });
+                const g = id => el(id);
+                const settings = {
+                    botUsername:              g('s-botUsername').value.trim(),
+                    botToken:                 g('s-botToken').value.trim(),
+                    welcomeMessage:           g('s-welcomeMessage').value.trim(),
+                    adZoneId:                 g('s-adZoneId').value.trim(),
+                    adValue:                  parseFloat(g('s-adValue').value)||0,
+                    dailyAdLimit:             parseInt(g('s-dailyAdLimit').value)||0,
+                    adsPerBreak:              parseInt(g('s-adsPerBreak').value)||0,
+                    breakDuration:            parseInt(g('s-breakDuration').value)||0,
+                    referralBonus:            parseFloat(g('s-referralBonus').value)||0,
+                    minimumWithdrawReferrals: parseInt(g('s-minRefs').value)||0,
+                    withdrawMethods:          methods
+                };
+                await db.ref('config').update(settings);
+                alert('✅ Settings saved!');
+            } catch(e) { alert('❌ ' + e.message); }
+        },
+        sendBroadcast: async () => {
+            const msg = el('bc-msg').value.trim();
+            if (!msg) { alert('Enter a message.'); return; }
+            if (!confirm('Queue this broadcast?')) return;
+            try {
+                await db.ref('broadcastQueue').push({ message:msg, timestamp:Date.now(), status:'pending' });
+                alert('✅ Broadcast queued!');
+                el('bc-msg').value = '';
+            } catch(e) { alert('❌ ' + e.message); }
+        }
+    };
+
+    // ── Navigation ────────────────────────────────────────────────────────
+    const pageMap = {
+        dashboard:   renderDashboard,
+        users:       renderUsers,
+        withdrawals: renderWithdrawals,
+        history:     renderHistory,
+        tasks:       renderTasks,
+        settings:    renderSettings,
+        broadcast:   renderBroadcast
+    };
+
+    window.navTo = (key) => {
+        const link = document.querySelector(`.nav-menu li[data-page="${key}"]`);
+        if (link) link.click();
+    };
+
+    document.querySelectorAll('.nav-menu li').forEach(li => {
+        li.addEventListener('click', () => {
+            const key = li.dataset.page;
+            if (!pageMap[key]) return;
+            document.querySelectorAll('.nav-menu li').forEach(l => l.classList.remove('active'));
+            li.classList.add('active');
+            pageTitleEl.textContent = li.textContent.trim();
+            pageMap[key]();
+            sidebar.classList.remove('open');
+            overlay.classList.remove('show');
+        });
+    });
+
+    el('menu-toggle').addEventListener('click', () => { sidebar.classList.add('open'); overlay.classList.add('show'); });
+    document.querySelector('.close-btn').addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
+    overlay.addEventListener('click', () => { sidebar.classList.remove('open'); overlay.classList.remove('show'); });
+
+    // ── Start ─────────────────────────────────────────────────────────────
+    renderDashboard();
+});
+</script>
+</body>
+</html>
